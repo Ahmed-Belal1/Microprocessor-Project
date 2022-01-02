@@ -406,7 +406,7 @@ public class Tomasulo {
 		br = new BufferedReader(new FileReader(instructionsFile));
 		String st1;
 		while ((st1 = br.readLine()) != null) {
-			String[] line = st.split(" ");
+			String[] line = st1.split(" ");
 			switch (line[0]) {
 			case "ADD": {
 				Instruction inst = new Instruction("ADD", this.latencies.get("ADD"),
@@ -463,7 +463,9 @@ public class Tomasulo {
 		}
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
+		Tomasulo t = new Tomasulo();
+		t.runProgram("Instructions.txt", "Latency.txt");
 
 	}
 }
