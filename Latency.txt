@@ -1,5 +1,5 @@
-MUL 8
-ADD 3
+MUL 6
+ADD 4
 SUB 3
 DIV 10
 LD 5

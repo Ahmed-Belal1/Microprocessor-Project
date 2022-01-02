@@ -7,5 +7,6 @@ public class RegisterData {
 		super();
 		this.tag="0";
 	}
-	
+
+
 }

@@ -23,6 +23,13 @@ public class Instruction {
 		this.endExecute=0;
 		this.writebackCycle=0;
 	}
-	
+
+	public String toString()
+	{
+		String out = "OPCODE >> " + this.opcode + "-- RT >> " + this.rt + "-- RS >> " + this.rs +
+				"-- RD >>" + this.rd + "-- EFFECTIVE ADDRESS >>" + this.effectiveAddress;
+
+		return out;
+	}
 	
 }

@@ -22,6 +22,8 @@ public class CommonBus {
 			if (s.firstWaiting.equals("") && s.secondWaiting.equals("")) {
 				bus.remove(s);
 			}
+			if( bus.isEmpty()  )
+				break;
 		}
 		
 		

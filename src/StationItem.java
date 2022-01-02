@@ -27,6 +27,9 @@ public class StationItem {
 	public StationItem() {
 		super();
 		this.busy=false;
+		this.firstWaiting = "";
+		this.secondWaiting = "";
+		this.tag = "";
 	}
 	
 	
