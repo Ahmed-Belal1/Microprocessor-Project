@@ -1,6 +1,6 @@
 MUL 6
 ADD 4
-SUB 3
-DIV 10
-LD 5
-SD 4
+SUB 2
+DIV 4
+LD 1
+SD 2

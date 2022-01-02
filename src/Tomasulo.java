@@ -396,7 +396,7 @@ public class Tomasulo {
 				float res= this.registerFile[regdest].data;
 				this.memory[this.storeBuffer[i].effectiveAdress]=res;
 				this.storeBuffer[i].busy=false;
-				this.loadcount--;
+				this.storecount--;
 			}
 		}
 
