@@ -500,28 +500,28 @@ public class Tomasulo {
 	public void printStations()
 	{
 		System.out.println("-----------------------------Addition Station------------------------------------");
-		System.out.printf("%5s %7s %10s %10s %15s %15s %20s %20s", "TAG", "firstValue", "secondValue", "firstWaiting" , "secondWaiting" , "effectiveAddress" , "remainingCycles" , "Instruction" );
+		System.out.printf("%5s %5s %7s %10s %10s %15s %15s %20s %20s", "BUSY" , "TAG", "firstValue", "secondValue", "firstWaiting" , "secondWaiting" , "effectiveAddress" , "remainingCycles" , "Instruction" );
 		System.out.println();
 		System.out.println("-----------------------------------------------------------------------------");
 
 		printStation(this.additionStation);
 
 		System.out.println("-----------------------------Multiplication Station------------------------------------");
-		System.out.printf("%5s %7s %10s %10s %15s %15s %20s %20s", "TAG", "firstValue", "secondValue", "firstWaiting" , "secondWaiting" , "effectiveAddress" , "remainingCycles" , "Instruction" );
+		System.out.printf("%5s %5s %7s %10s %10s %15s %15s %20s %20s", "BUSY",  "TAG", "firstValue", "secondValue", "firstWaiting" , "secondWaiting" , "effectiveAddress" , "remainingCycles" , "Instruction" );
 		System.out.println();
 		System.out.println("-----------------------------------------------------------------------------");
 
 		printStation(this.multiplicationStation);
 
 		System.out.println("-----------------------------Load Buffer------------------------------------");
-		System.out.printf("%5s %7s %10s %10s %15s %15s %20s %20s", "TAG", "firstValue", "secondValue", "firstWaiting" , "secondWaiting" , "effectiveAddress" , "remainingCycles" , "Instruction" );
+		System.out.printf("%5s %5s %7s %10s %10s %15s %15s %20s %20s",  "BUSY",  "TAG", "firstValue", "secondValue", "firstWaiting" , "secondWaiting" , "effectiveAddress" , "remainingCycles" , "Instruction" );
 		System.out.println();
 		System.out.println("-----------------------------------------------------------------------------");
 
 		printStation(this.loadBuffer);
 
 		System.out.println("-----------------------------Store Buffer------------------------------------");
-		System.out.printf("%5s %7s %10s %10s %15s %15s %20s %20s", "TAG", "firstValue", "secondValue", "firstWaiting" , "secondWaiting" , "effectiveAddress" , "remainingCycles" , "Instruction" );
+		System.out.printf("%5s %5s %7s %10s %10s %15s %15s %20s %20s",  "BUSY",  "TAG", "firstValue", "secondValue", "firstWaiting" , "secondWaiting" , "effectiveAddress" , "remainingCycles" , "Instruction" );
 		System.out.println();
 		System.out.println("-----------------------------------------------------------------------------");
 
@@ -541,8 +541,8 @@ public class Tomasulo {
 	{
 		for( StationItem item : arr )
 		{
-			System.out.format("%5s %7f %10f %10s %15s %15d %20d %20s",
-					item.tag, item.firstValue, item.secondValue, item.firstWaiting , item.secondWaiting , item.effectiveAdress , item.remainingCycles ,  item.inst);
+			System.out.format("%5b %5s %7f %10f %10s %15s %15d %20d %20s",
+					item.busy , item.tag, item.firstValue, item.secondValue, item.firstWaiting , item.secondWaiting , item.effectiveAdress , item.remainingCycles ,  item.inst );
 			System.out.println();
 		}
 	}
