@@ -21,10 +21,12 @@ public class Tomasulo {
 	public int addcount;
 	public int mulcount;
 	public CommonBus bus;
+	public Queue<Instruction> writeBackQueue;
 
 	public Tomasulo() {
 		this.memory = new float[2048];
 		this.latencies = new HashMap<String, Integer>();
+		writeBackQueue = new LinkedList<Instruction>();
 		this.instructions = new LinkedList<Instruction>();
 		this.traceInstructionTable = new ArrayList<Instruction>();
 		this.registerFile = new RegisterData[33];
@@ -38,27 +40,25 @@ public class Tomasulo {
 		this.addcount = 0;
 		this.mulcount = 0;
 
-		for( int i = 0 ; i<registerFile.length ; i++ )
-		{
+		for (int i = 0; i < registerFile.length; i++) {
 			registerFile[i] = new RegisterData();
 			registerFile[i].data = i;
 		}
 
-
-		this.init(loadBuffer); this.init(storeBuffer);
-		this.init(additionStation); this.init(multiplicationStation);
+		this.init(loadBuffer);
+		this.init(storeBuffer);
+		this.init(additionStation);
+		this.init(multiplicationStation);
 	}
 
-
-	void init( StationItem [] arr)
-	{
-		for(int i = 0 ; i<arr.length ; i++)
-			arr[i]  = new StationItem();
+	void init(StationItem[] arr) {
+		for (int i = 0; i < arr.length; i++)
+			arr[i] = new StationItem();
 
 	}
 
 	public void issue(int cycle) {
-			Instruction instruction = this.instructions.peek();
+		Instruction instruction = this.instructions.peek();
 
 		switch (instruction.opcode) {
 		case "ADD": {
@@ -156,7 +156,7 @@ public class Tomasulo {
 					item.secondWaiting = this.registerFile[instruction.rt].tag;
 				}
 
-				if ( !item.firstWaiting.equals("") || !item.secondWaiting.equals("")) {
+				if (!item.firstWaiting.equals("") || !item.secondWaiting.equals("")) {
 					this.bus.requestUpdate(item);
 				}
 
@@ -223,7 +223,6 @@ public class Tomasulo {
 				item.remainingCycles = this.latencies.get("LD");
 				item.effectiveAdress = instruction.effectiveAddress;
 
-
 				item.busy = true;
 				for (int i = 0; i < this.loadBuffer.length; i++) {
 					if (this.loadBuffer[i] == null || !this.loadBuffer[i].busy) {
@@ -276,20 +275,23 @@ public class Tomasulo {
 
 		for (int i = 0; i < this.additionStation.length; i++) {
 			if (this.additionStation[i].busy && this.additionStation[i].firstWaiting.equals("")
-					&& this.additionStation[i].secondWaiting.equals("") && cycle > this.additionStation[i].inst.issueCycle ) {
+					&& this.additionStation[i].secondWaiting.equals("")
+					&& cycle > this.additionStation[i].inst.issueCycle) {
 				this.additionStation[i].remainingCycles--;
 				if (this.additionStation[i].inst.startExecute == 0) {
 					this.additionStation[i].inst.startExecute = cycle;
 				}
 				if (this.additionStation[i].remainingCycles == 0 && this.additionStation[i].inst.endExecute == 0) {
 					this.additionStation[i].inst.endExecute = cycle;
+					this.writeBackQueue.add(this.additionStation[i].inst);
 				}
 			}
 		}
 
 		for (int i = 0; i < this.multiplicationStation.length; i++) {
 			if (this.multiplicationStation[i].busy && this.multiplicationStation[i].firstWaiting.equals("")
-					&& this.multiplicationStation[i].secondWaiting.equals("") && cycle > this.multiplicationStation[i].inst.issueCycle) {
+					&& this.multiplicationStation[i].secondWaiting.equals("")
+					&& cycle > this.multiplicationStation[i].inst.issueCycle) {
 				this.multiplicationStation[i].remainingCycles--;
 				if (this.multiplicationStation[i].inst.startExecute == 0) {
 					this.multiplicationStation[i].inst.startExecute = cycle;
@@ -297,6 +299,7 @@ public class Tomasulo {
 				if (this.multiplicationStation[i].remainingCycles == 0
 						&& this.multiplicationStation[i].inst.endExecute == 0) {
 					this.multiplicationStation[i].inst.endExecute = cycle;
+					this.writeBackQueue.add(this.multiplicationStation[i].inst);
 				}
 			}
 		}
@@ -310,100 +313,113 @@ public class Tomasulo {
 				}
 				if (this.loadBuffer[i].remainingCycles == 0 && this.loadBuffer[i].inst.endExecute == 0) {
 					this.loadBuffer[i].inst.endExecute = cycle;
+					this.writeBackQueue.add(this.loadBuffer[i].inst);
 				}
 			}
 		}
-		
-		for (int i=0;i<this.storeBuffer.length;i++) {
-			if (this.storeBuffer[i].busy&& this.storeBuffer[i].firstWaiting.equals("") && cycle > this.storeBuffer[i].inst.issueCycle) {
+
+		for (int i = 0; i < this.storeBuffer.length; i++) {
+			if (this.storeBuffer[i].busy && this.storeBuffer[i].firstWaiting.equals("")
+					&& cycle > this.storeBuffer[i].inst.issueCycle) {
 				this.storeBuffer[i].remainingCycles--;
 				if (this.storeBuffer[i].inst.startExecute == 0) {
 					this.storeBuffer[i].inst.startExecute = cycle;
 				}
 				if (this.storeBuffer[i].remainingCycles == 0 && this.storeBuffer[i].inst.endExecute == 0) {
 					this.storeBuffer[i].inst.endExecute = cycle;
+					this.writeBackQueue.add(this.storeBuffer[i].inst);
 				}
 			}
 		}
 
 	}
-	
+
 	public void writeBack(int cycle) {
-		
+
+		Instruction ins = this.writeBackQueue.peek();
+
 		for (int i = 0; i < this.additionStation.length; i++) {
-			if (this.additionStation[i].busy && this.additionStation[i].remainingCycles<0 && cycle > this.additionStation[i].inst.endExecute ) {
-				float res=0;
-				float v1= this.additionStation[i].firstValue;
-				float v2= this.additionStation[i].secondValue;
-				this.additionStation[i].inst.writebackCycle=cycle;
+			if (this.additionStation[i].busy && this.additionStation[i].remainingCycles < 0
+					&& cycle > this.additionStation[i].inst.endExecute && ins == this.additionStation[i].inst) {
+				float res = 0;
+				this.writeBackQueue.remove();
+				float v1 = this.additionStation[i].firstValue;
+				float v2 = this.additionStation[i].secondValue;
+				this.additionStation[i].inst.writebackCycle = cycle;
 				if (this.additionStation[i].inst.opcode.equals("ADD")) {
-					res =v1+v2;	
-				}else {
-					res=v1-v2;
+					res = v1 + v2;
+				} else {
+					res = v1 - v2;
 				}
-				int regdest= this.additionStation[i].inst.rd;
-				if(registerFile[regdest].tag.equals(this.additionStation[i].tag)) {
-					registerFile[regdest].data=res;
-					registerFile[regdest].tag="0";
+				int regdest = this.additionStation[i].inst.rd;
+				if (registerFile[regdest].tag.equals(this.additionStation[i].tag)) {
+					registerFile[regdest].data = res;
+					registerFile[regdest].tag = "0";
 				}
 				bus.updateTag(this.additionStation[i].tag, res);
-				this.additionStation[i].busy=false;
+				this.additionStation[i].busy = false;
 				this.addcount--;
 			}
 		}
-		
+
 		for (int i = 0; i < this.multiplicationStation.length; i++) {
-			if (this.multiplicationStation[i].busy && this.multiplicationStation[i].remainingCycles<0 && cycle > this.multiplicationStation[i].inst.endExecute) {
-				float res=0;
-				float v1= this.multiplicationStation[i].firstValue;
-				float v2= this.multiplicationStation[i].secondValue;
-				this.multiplicationStation[i].inst.writebackCycle=cycle;
+			if (this.multiplicationStation[i].busy && this.multiplicationStation[i].remainingCycles < 0
+					&& cycle > this.multiplicationStation[i].inst.endExecute
+					&& ins == this.multiplicationStation[i].inst) {
+				float res = 0;
+				this.writeBackQueue.remove();
+				float v1 = this.multiplicationStation[i].firstValue;
+				float v2 = this.multiplicationStation[i].secondValue;
+				this.multiplicationStation[i].inst.writebackCycle = cycle;
 				if (this.multiplicationStation[i].inst.opcode.equals("MUL")) {
-					res =v1*v2;	
-				}else {
-					res=v1/v2;
+					res = v1 * v2;
+				} else {
+					res = v1 / v2;
 				}
-				int regdest= this.multiplicationStation[i].inst.rd;
-				if(registerFile[regdest].tag.equals(this.multiplicationStation[i].tag)) {
-					registerFile[regdest].data=res;
-					registerFile[regdest].tag="0";
+				int regdest = this.multiplicationStation[i].inst.rd;
+				if (registerFile[regdest].tag.equals(this.multiplicationStation[i].tag)) {
+					registerFile[regdest].data = res;
+					registerFile[regdest].tag = "0";
 				}
 				bus.updateTag(this.multiplicationStation[i].tag, res);
-				this.multiplicationStation[i].busy=false;
+				this.multiplicationStation[i].busy = false;
 				this.mulcount--;
 			}
 		}
-		
-		for(int i=0;i<this.loadBuffer.length;i++) {
-			if (this.loadBuffer[i].busy && this.loadBuffer[i].remainingCycles<0 && cycle > this.loadBuffer[i].inst.endExecute) {
-				int regdest= this.loadBuffer[i].inst.rd;
-				float res= this.memory[this.loadBuffer[i].effectiveAdress];
-				this.loadBuffer[i].inst.writebackCycle=cycle;
-				if(registerFile[regdest].tag.equals(this.loadBuffer[i].tag)) {
-					registerFile[regdest].data=res;
-					registerFile[regdest].tag="0";
+
+		for (int i = 0; i < this.loadBuffer.length; i++) {
+			if (this.loadBuffer[i].busy && this.loadBuffer[i].remainingCycles < 0
+					&& cycle > this.loadBuffer[i].inst.endExecute && ins == this.loadBuffer[i].inst) {
+				int regdest = this.loadBuffer[i].inst.rd;
+				this.writeBackQueue.remove();
+				float res = this.memory[this.loadBuffer[i].effectiveAdress];
+				this.loadBuffer[i].inst.writebackCycle = cycle;
+				if (registerFile[regdest].tag.equals(this.loadBuffer[i].tag)) {
+					registerFile[regdest].data = res;
+					registerFile[regdest].tag = "0";
 				}
 				bus.updateTag(this.loadBuffer[i].tag, res);
-				this.loadBuffer[i].busy=false;
+				this.loadBuffer[i].busy = false;
 				this.loadcount--;
 			}
 		}
-		
-		for(int i=0;i<this.storeBuffer.length;i++) {
-			if (this.storeBuffer[i].busy && this.storeBuffer[i].remainingCycles<0 && cycle > this.storeBuffer[i].inst.endExecute) {
-				int regdest= this.storeBuffer[i].inst.rt;
-				this.storeBuffer[i].inst.writebackCycle=cycle;
-				float res= this.registerFile[regdest].data;
-				this.memory[this.storeBuffer[i].effectiveAdress]=res;
-				this.storeBuffer[i].busy=false;
+
+		for (int i = 0; i < this.storeBuffer.length; i++) {
+			if (this.storeBuffer[i].busy && this.storeBuffer[i].remainingCycles < 0
+					&& cycle > this.storeBuffer[i].inst.endExecute && ins == this.storeBuffer[i].inst) {
+				int regdest = this.storeBuffer[i].inst.rt;
+				this.writeBackQueue.remove();
+				this.storeBuffer[i].inst.writebackCycle = cycle;
+				float res = this.registerFile[regdest].data;
+				this.memory[this.storeBuffer[i].effectiveAdress] = res;
+				this.storeBuffer[i].busy = false;
 				this.storecount--;
 			}
 		}
 
 	}
 
-	public void print(Object s)
-	{
+	public void print(Object s) {
 		System.out.println(s.toString());
 	}
 
@@ -416,12 +432,14 @@ public class Tomasulo {
 				|| !(this.storecount == 0))) {
 
 			cycle++;
-			if( !this.instructions.isEmpty())
+			if (!this.instructions.isEmpty())
 				issue(cycle);
 			execute(cycle);
-			writeBack(cycle);
-			print( "Cycle : " + cycle);
-            printStations();
+			if (!this.writeBackQueue.isEmpty()) {
+				writeBack(cycle);
+			}
+			print("Cycle : " + cycle);
+			printStations();
 			// at the end of each cycle print all occupied register
 			// print all stations content
 
@@ -497,52 +515,54 @@ public class Tomasulo {
 		}
 	}
 
-	public void printStations()
-	{
+	public void printStations() {
 		System.out.println("-----------------------------Addition Station------------------------------------");
-		System.out.printf("%5s %5s %7s %10s %10s %15s %15s %20s %20s", "BUSY" , "TAG", "firstValue", "secondValue", "firstWaiting" , "secondWaiting" , "effectiveAddress" , "remainingCycles" , "Instruction" );
+		System.out.printf("%5s %5s %7s %10s %10s %15s %15s %20s %20s", "BUSY", "TAG", "firstValue", "secondValue",
+				"firstWaiting", "secondWaiting", "effectiveAddress", "remainingCycles", "Instruction");
 		System.out.println();
 		System.out.println("-----------------------------------------------------------------------------");
 
 		printStation(this.additionStation);
 
 		System.out.println("-----------------------------Multiplication Station------------------------------------");
-		System.out.printf("%5s %5s %7s %10s %10s %15s %15s %20s %20s", "BUSY",  "TAG", "firstValue", "secondValue", "firstWaiting" , "secondWaiting" , "effectiveAddress" , "remainingCycles" , "Instruction" );
+		System.out.printf("%5s %5s %7s %10s %10s %15s %15s %20s %20s", "BUSY", "TAG", "firstValue", "secondValue",
+				"firstWaiting", "secondWaiting", "effectiveAddress", "remainingCycles", "Instruction");
 		System.out.println();
 		System.out.println("-----------------------------------------------------------------------------");
 
 		printStation(this.multiplicationStation);
 
 		System.out.println("-----------------------------Load Buffer------------------------------------");
-		System.out.printf("%5s %5s %7s %10s %10s %15s %15s %20s %20s",  "BUSY",  "TAG", "firstValue", "secondValue", "firstWaiting" , "secondWaiting" , "effectiveAddress" , "remainingCycles" , "Instruction" );
+		System.out.printf("%5s %5s %7s %10s %10s %15s %15s %20s %20s", "BUSY", "TAG", "firstValue", "secondValue",
+				"firstWaiting", "secondWaiting", "effectiveAddress", "remainingCycles", "Instruction");
 		System.out.println();
 		System.out.println("-----------------------------------------------------------------------------");
 
 		printStation(this.loadBuffer);
 
 		System.out.println("-----------------------------Store Buffer------------------------------------");
-		System.out.printf("%5s %5s %7s %10s %10s %15s %15s %20s %20s",  "BUSY",  "TAG", "firstValue", "secondValue", "firstWaiting" , "secondWaiting" , "effectiveAddress" , "remainingCycles" , "Instruction" );
+		System.out.printf("%5s %5s %7s %10s %10s %15s %15s %20s %20s", "BUSY", "TAG", "firstValue", "secondValue",
+				"firstWaiting", "secondWaiting", "effectiveAddress", "remainingCycles", "Instruction");
 		System.out.println();
 		System.out.println("-----------------------------------------------------------------------------");
 
 		printStation(this.storeBuffer);
 
 		print("-----------------------------Register File------------------------------------");
-		for( int i  = 1 ; i<this.registerFile.length ; i++ )
-			print( "R" + i + ">>" + " Tag :" + this.registerFile[i].tag + "--- Data : " + this.registerFile[i].data);
+		for (int i = 1; i < this.registerFile.length; i++)
+			print("R" + i + ">>" + " Tag :" + this.registerFile[i].tag + "--- Data : " + this.registerFile[i].data);
 
 		print("-----------------------------Instruction Queue------------------------------------");
-		for( Instruction i : this.instructions )
+		for (Instruction i : this.instructions)
 			print(i.toString());
 
 	}
 
-	public void printStation( StationItem [] arr )
-	{
-		for( StationItem item : arr )
-		{
-			System.out.format("%5b %5s %7f %10f %10s %15s %15d %20d %20s",
-					item.busy , item.tag, item.firstValue, item.secondValue, item.firstWaiting , item.secondWaiting , item.effectiveAdress , item.remainingCycles ,  item.inst );
+	public void printStation(StationItem[] arr) {
+		for (StationItem item : arr) {
+			System.out.format("%5b %5s %7f %10f %10s %15s %15d %20d %20s", item.busy, item.tag, item.firstValue,
+					item.secondValue, item.firstWaiting, item.secondWaiting, item.effectiveAdress, item.remainingCycles,
+					item.inst);
 			System.out.println();
 		}
 	}
