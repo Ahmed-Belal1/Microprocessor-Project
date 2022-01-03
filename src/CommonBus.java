@@ -14,7 +14,8 @@ public class CommonBus {
 			if (s.firstWaiting.equals(tag)) {
 				s.firstWaiting = "";
 				s.firstValue = data;
-			} else if (s.secondWaiting.equals(tag)) {
+			}
+			if (s.secondWaiting.equals(tag)) {
 				s.secondValue = data;
 				s.secondWaiting = "";
 			}
